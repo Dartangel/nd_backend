@@ -39,6 +39,9 @@ const studentSchema = new mongoose.Schema({
     serviceCost: { type: Number, required: true, default: 0 },
     servicePayed: { type: Number, required: true, default: 0 },
     passport: { type: String, require: false },
+    isNastrfication: { type: Boolean, require: false },
+    isNastrficationPayed: { type: Boolean, require: false },
+    isSessionOpen: { type: Boolean, require: false },
     diplom: { type: String, require: false },
     image: { type: String, require: false },
     annualCost: { type: Number, required: true, default: 0 },
@@ -147,6 +150,7 @@ const resetannualCostForNewYear = async () => {
     students.forEach(async (student) => {
         student.servicePayed = 0;  // Обнуляем оплаченные суммы
         student.annualPayed = student.annualCost;  // Оставшийся долг = годовая сумма
+        student.isSessionOpen = true;  // Оставшийся долг = годовая сумма
         await student.save();
     });
 };
@@ -161,8 +165,7 @@ setInterval(() => {
 
 app.put('/students/:id', authenticate, upload, async (req, res) => {
     const { id } = req.params;
-    const { name, surname, parentName, study, prof, serviceCost, servicePayed, annualPayed, annualCost, year, mobile, parentMobile } = req.body;
-
+    const { name, surname, parentName, study, prof, serviceCost, servicePayed, annualPayed, annualCost, year, mobile, parentMobile, isNastrfication, isNastrficationPayed, isSessionOpen } = req.body;
     const updates = {
         name,
         surname,
@@ -172,6 +175,9 @@ app.put('/students/:id', authenticate, upload, async (req, res) => {
         parentMobile,
         prof,
         year,
+        isSessionOpen,
+        isNastrficationPayed,
+        isNastrfication,
         serviceCost: Number(serviceCost) || 0,
         servicePayed: Number(servicePayed) || 0,
         annualCost: Number(annualCost) || 0,
@@ -203,7 +209,7 @@ app.put('/students/:id', authenticate, upload, async (req, res) => {
 });
 // Маршрут для добавления студента
 app.post('/students', authenticate, upload, async (req, res) => {
-    const { name, surname, parentName, study, prof, serviceCost, servicePayed, mobile, parentMobile, year, annualCost, annualPayed } = req.body;
+    const { name, surname, parentName, study, prof, serviceCost, servicePayed, mobile, parentMobile, year, annualCost, annualPayed, isSessionOpen, isNastrfication, isNastrficationPayed } = req.body;
 
     const passportFile = req.files['passport'] ? `uploads/${req.files['passport'][0].filename}` : null;
     const diplomFile = req.files['diplom'] ? `uploads/${req.files['diplom'][0].filename}` : null;
@@ -212,7 +218,7 @@ app.post('/students', authenticate, upload, async (req, res) => {
     if (!name || !surname || !parentName || !study || !prof || serviceCost === undefined || servicePayed === undefined || annualCost === undefined) {
         return res.status(400).send({ message: 'All required fields must be provided' });
     }
-
+  
     try {
         const newStudent = new Student({
             name,
@@ -222,11 +228,14 @@ app.post('/students', authenticate, upload, async (req, res) => {
             year,
             prof,
             mobile,
+            isSessionOpen,
+            isNastrficationPayed,
+            isNastrfication,
             parentMobile,
             serviceCost: Number(serviceCost) || 0,
             servicePayed: Number(servicePayed) || 0,
             annualCost: Number(annualCost) || 0,
-            annualPayed: Number(annualCost) - Number(annualPayed),  // Расчет задолженности
+            annualPayed: Number(annualPayed),
             passport: passportFile,
             diplom: diplomFile,
             image: imageFile
@@ -247,7 +256,6 @@ app.get('/students', authenticate, async (req, res) => {
         const responseStudents = students.map(student => {
             return {
                 ...student.toObject(),
-                annualPayed: student.annualCost - student.servicePayed,  // Рассчитываем задолженность
             };
         });
 
@@ -271,7 +279,6 @@ app.get('/students/year/:year', authenticate, async (req, res) => {
         const responseStudents = students.map(student => {
             return {
                 ...student.toObject(),
-                annualPayed: student.annualCost - student.servicePayed,  // Рассчитываем задолженность
             };
         });
 
@@ -295,7 +302,7 @@ app.get('/students/:id', authenticate, async (req, res) => {
 
         res.status(200).json({
             ...student.toObject(),
-            annualPayed: student.annualCost - student.servicePayed,
+            annualPayed: student.servicePayed,
         });
     } catch (error) {
         res.status(500).send({ message: 'Internal Server Error' });
