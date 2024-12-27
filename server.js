@@ -149,7 +149,7 @@ const resetannualCostForNewYear = async () => {
 
     students.forEach(async (student) => {
         student.servicePayed = 0;  // Обнуляем оплаченные суммы
-        student.annualPayed = student.annualCost;  // Оставшийся долг = годовая сумма
+        student.annualPayed = 0;  // Оставшийся долг = годовая сумма
         student.isSessionOpen = true;  // Оставшийся долг = годовая сумма
         await student.save();
     });
@@ -181,7 +181,7 @@ app.put('/students/:id', authenticate, upload, async (req, res) => {
         serviceCost: Number(serviceCost) || 0,
         servicePayed: Number(servicePayed) || 0,
         annualCost: Number(annualCost) || 0,
-        annualPayed: Number(annualPayed) || 0,  // Оставшийся долг = годовая сумма
+        annualPayed: Number(annualPayed) || 0,
     };
 
     if (req.files['passport']) {
@@ -302,7 +302,6 @@ app.get('/students/:id', authenticate, async (req, res) => {
 
         res.status(200).json({
             ...student.toObject(),
-            annualPayed: student.servicePayed,
         });
     } catch (error) {
         res.status(500).send({ message: 'Internal Server Error' });
